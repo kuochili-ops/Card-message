@@ -342,7 +342,7 @@ To My Best Friend ❤️</textarea>
     dirLight.castShadow = true;
     scene.add(dirLight);
 
-    // --- 3. 動態卡片內頁貼圖生成 (底紋與 stamp 印章) ---
+    // --- 3. 訊息與 URL 參數連動解析 ---
     const CARD_W = 8;
     const CARD_L = 7;
     const MAX_BOARD_WIDTH = CARD_W * 1.95; 
@@ -357,6 +357,7 @@ To My Best Friend ❤️</textarea>
     let autoPlayTimer = null;
     let isAnimating = false;
 
+    // 載入時解析 URL 參數
     function loadUrlParams() {
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.has('msg')) {
@@ -368,7 +369,7 @@ To My Best Friend ❤️</textarea>
     }
     loadUrlParams();
 
-    // 建立卡片頁面動態 Canvas 貼圖
+    // 建立卡片頁面動態 Canvas 貼圖 (點陣紋理 + 手作虛線 + 右下印章)
     const pageCanvas = document.createElement('canvas');
     pageCanvas.width = 1024;
     pageCanvas.height = 2048;
@@ -400,30 +401,26 @@ To My Best Friend ❤️</textarea>
       pageCtx.lineWidth = 6;
       pageCtx.setLineDash([16, 12]);
 
-      // 上頁邊框
       pageCtx.strokeRect(30, 30, w - 60, (h / 2) - 60);
-      // 下頁邊框
       pageCtx.strokeRect(30, (h / 2) + 30, w - 60, (h / 2) - 60);
 
-      pageCtx.setLineDash([]); // 重設線條
+      pageCtx.setLineDash([]); 
 
-      // 4. 右下角「早安 Good Morning」印章標章 (Stamp)
+      // 4. 右下角印章標章 (Stamp)
       const stampX = w - 180;
       const stampY = h - 180;
       const stampR = 90;
 
       pageCtx.save();
       pageCtx.translate(stampX, stampY);
-      pageCtx.rotate(-0.15); // 微傾斜增加印章感
+      pageCtx.rotate(-0.15); 
 
-      // 外雙圈
       pageCtx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
       pageCtx.lineWidth = 5;
       pageCtx.beginPath(); pageCtx.arc(0, 0, stampR, 0, Math.PI * 2); pageCtx.stroke();
       pageCtx.lineWidth = 2;
       pageCtx.beginPath(); pageCtx.arc(0, 0, stampR - 8, 0, Math.PI * 2); pageCtx.stroke();
 
-      // 印章文字
       pageCtx.fillStyle = 'rgba(255, 255, 255, 0.9)';
       pageCtx.font = 'bold 28px sans-serif';
       pageCtx.textAlign = 'center';
@@ -433,11 +430,10 @@ To My Best Friend ❤️</textarea>
       pageCtx.fillText('Good Morning', 0, 20);
 
       pageCtx.restore();
-
       pageTexture.needsUpdate = true;
     }
 
-    // --- 字卡 Canvas ---
+    // 字卡貼圖 Canvas
     const textCanvas = document.createElement('canvas');
     textCanvas.width = 1600;
     textCanvas.height = 450;
@@ -539,13 +535,13 @@ To My Best Friend ❤️</textarea>
     const cardRoot = new THREE.Group();
     scene.add(cardRoot);
 
-    // 卡片下頁 Plane Geometry
+    // 卡片下頁
     const baseBottomMesh = new THREE.Mesh(new THREE.PlaneGeometry(CARD_L, CARD_W * 2), baseMaterial);
     baseBottomMesh.geometry.rotateX(Math.PI / 2);
     baseBottomMesh.geometry.translate(CARD_L / 2, 0, 0);
     cardRoot.add(baseBottomMesh);
 
-    // 卡片上頁 Plane Geometry
+    // 卡片上頁
     const topPivot = new THREE.Group();
     cardRoot.add(topPivot);
 
@@ -705,7 +701,7 @@ To My Best Friend ❤️</textarea>
       });
     }
 
-    // 錄影存檔
+    // A. 錄影存檔功能
     document.getElementById('btnRecord').addEventListener('click', () => {
       if (isAnimating) return;
       if (autoPlayTimer) clearTimeout(autoPlayTimer);
@@ -739,7 +735,7 @@ To My Best Friend ❤️</textarea>
       });
     });
 
-    // 分享網址複製
+    // B. 分享網址複製功能
     document.getElementById('btnShare').addEventListener('click', () => {
       const rawText = document.getElementById('msgInput').value;
       const baseCol = document.getElementById('baseColor').value.replace('#', '');
@@ -817,8 +813,8 @@ To My Best Friend ❤️</textarea>
       updateCardGeometry();
     });
 
-    document.getElementById('baseColor').addEventListener('input', (e) => {
-      updatePageTexture(); // 動態更新底紙顏色與紋理
+    document.getElementById('baseColor').addEventListener('input', () => {
+      updatePageTexture();
       resetAutoPlayTimer();
     });
     document.getElementById('textColor').addEventListener('input', () => {
