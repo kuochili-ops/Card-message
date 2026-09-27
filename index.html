@@ -24,7 +24,7 @@
     }
     header {
       background-color: #1e1e28;
-      padding: 10px 16px;
+      padding: 8px 16px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -33,9 +33,37 @@
       flex-shrink: 0;
     }
     h1 {
-      font-size: 1rem;
+      font-size: 0.95rem;
       font-weight: 600;
       color: #64b5f6;
+    }
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .btn-header {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s ease;
+    }
+    .btn-header:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    .btn-header-record {
+      background: #e53935;
+      border-color: #ef5350;
+    }
+    .btn-header-record:hover {
+      background: #d32f2f;
     }
     .main-container {
       display: flex;
@@ -82,7 +110,7 @@
         top: auto;
         bottom: 10px;
         width: auto;
-        max-height: 45vh;
+        max-height: 48vh;
       }
     }
     .panel {
@@ -133,7 +161,7 @@
     }
     textarea {
       width: 100%;
-      height: 80px;
+      height: 75px;
       padding: 8px;
       border-radius: 4px;
       border: 1px solid #48485e;
@@ -181,7 +209,7 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
-      margin-top: 8px;
+      margin-top: 10px;
     }
     .btn-action {
       background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);
@@ -244,7 +272,12 @@
 <body>
 
   <header>
-    <h1>Pop-Up Card Simulator — V-Fold 機構</h1>
+    <h1>Pop-Up Card Simulator</h1>
+    <!-- 頂部頁頭快捷鍵，隨手可點 -->
+    <div class="header-actions">
+      <button class="btn-header btn-header-record" id="btnHeaderRecord">🎥 錄影</button>
+      <button class="btn-header" id="btnHeaderShare">🔗 分享</button>
+    </div>
   </header>
 
   <div class="main-container">
@@ -254,11 +287,11 @@
     </div>
 
     <div class="sidebar">
-      <!-- 面板 1：多行訊息與輪播 -->
-      <div class="panel collapsed">
+      <!-- 面板 1：預設展開 (不加 collapsed) -->
+      <div class="panel">
         <div class="panel-header" onclick="togglePanel(this)">
           <h2>彈出訊息 (MESSAGE CARD)</h2>
-          <span class="toggle-icon">+</span>
+          <span class="toggle-icon">−</span>
         </div>
         <div class="panel-body">
           <div class="control-group">
@@ -270,6 +303,7 @@ To My Best Friend ❤️</textarea>
             <div class="auto-play-badge">⏱️ 6秒未觸碰將自動輪播下一句</div>
           </div>
 
+          <!-- 功能按鈕群組 -->
           <div class="action-btn-group">
             <button class="btn-action btn-record" id="btnRecord">
               🎥 錄製展頁短片存檔
@@ -357,7 +391,6 @@ To My Best Friend ❤️</textarea>
     let autoPlayTimer = null;
     let isAnimating = false;
 
-    // 載入時解析 URL 參數
     function loadUrlParams() {
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.has('msg')) {
@@ -369,7 +402,7 @@ To My Best Friend ❤️</textarea>
     }
     loadUrlParams();
 
-    // 建立卡片頁面動態 Canvas 貼圖 (點陣紋理 + 手作虛線 + 右下印章)
+    // 動態頁面貼圖
     const pageCanvas = document.createElement('canvas');
     pageCanvas.width = 1024;
     pageCanvas.height = 2048;
@@ -381,11 +414,9 @@ To My Best Friend ❤️</textarea>
       const w = pageCanvas.width;
       const h = pageCanvas.height;
 
-      // 1. 底色
       pageCtx.fillStyle = baseColor;
       pageCtx.fillRect(0, 0, w, h);
 
-      // 2. 幾何點陣 Polka Dot Grid
       pageCtx.fillStyle = 'rgba(255, 255, 255, 0.25)';
       const dotSpacing = 40;
       for (let x = dotSpacing; x < w; x += dotSpacing) {
@@ -396,7 +427,6 @@ To My Best Friend ❤️</textarea>
         }
       }
 
-      // 3. 虛線手作邊框 (Border Line)
       pageCtx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
       pageCtx.lineWidth = 6;
       pageCtx.setLineDash([16, 12]);
@@ -406,7 +436,6 @@ To My Best Friend ❤️</textarea>
 
       pageCtx.setLineDash([]); 
 
-      // 4. 右下角印章標章 (Stamp)
       const stampX = w - 180;
       const stampY = h - 180;
       const stampR = 90;
@@ -433,7 +462,7 @@ To My Best Friend ❤️</textarea>
       pageTexture.needsUpdate = true;
     }
 
-    // 字卡貼圖 Canvas
+    // 字卡貼圖
     const textCanvas = document.createElement('canvas');
     textCanvas.width = 1600;
     textCanvas.height = 450;
@@ -535,13 +564,11 @@ To My Best Friend ❤️</textarea>
     const cardRoot = new THREE.Group();
     scene.add(cardRoot);
 
-    // 卡片下頁
     const baseBottomMesh = new THREE.Mesh(new THREE.PlaneGeometry(CARD_L, CARD_W * 2), baseMaterial);
     baseBottomMesh.geometry.rotateX(Math.PI / 2);
     baseBottomMesh.geometry.translate(CARD_L / 2, 0, 0);
     cardRoot.add(baseBottomMesh);
 
-    // 卡片上頁
     const topPivot = new THREE.Group();
     cardRoot.add(topPivot);
 
@@ -675,7 +702,7 @@ To My Best Friend ❤️</textarea>
       mesh.geometry.computeVertexNormals();
     }
 
-    // --- 6. 自動輪播、錄影與分享功能 ---
+    // --- 6. 自動輪播、錄影與分享核心邏輯 ---
     function resetAutoPlayTimer() {
       if (autoPlayTimer) clearTimeout(autoPlayTimer);
       autoPlayTimer = setTimeout(() => {
@@ -701,8 +728,8 @@ To My Best Friend ❤️</textarea>
       });
     }
 
-    // A. 錄影存檔功能
-    document.getElementById('btnRecord').addEventListener('click', () => {
+    // 錄影執行函式
+    function startRecording() {
       if (isAnimating) return;
       if (autoPlayTimer) clearTimeout(autoPlayTimer);
 
@@ -733,23 +760,30 @@ To My Best Friend ❤️</textarea>
           recorder.stop();
         }, 500);
       });
-    });
+    }
 
-    // B. 分享網址複製功能
-    document.getElementById('btnShare').addEventListener('click', () => {
+    // 分享執行函式
+    function shareUrl() {
       const rawText = document.getElementById('msgInput').value;
       const baseCol = document.getElementById('baseColor').value.replace('#', '');
       const textCol = document.getElementById('textColor').value.replace('#', '');
       const boardCol = document.getElementById('boardColor').value.replace('#', '');
 
-      const shareUrl = `${window.location.origin}${window.location.pathname}?msg=${encodeURIComponent(rawText)}&base=${baseCol}&text=${textCol}&board=${boardCol}`;
+      const shareLink = `${window.location.origin}${window.location.pathname}?msg=${encodeURIComponent(rawText)}&base=${baseCol}&text=${textCol}&board=${boardCol}`;
 
-      navigator.clipboard.writeText(shareUrl).then(() => {
+      navigator.clipboard.writeText(shareLink).then(() => {
         alert('🎉 立體卡片設定網址已成功複製到剪貼簿！');
       }).catch(() => {
-        alert('複製失敗，請手動複製網址：\n' + shareUrl);
+        alert('複製失敗，請手動複製網址：\n' + shareLink);
       });
-    });
+    }
+
+    // 事件監聽（同時綁定面板按鈕與頂部頁頭快捷鍵）
+    document.getElementById('btnRecord').addEventListener('click', startRecording);
+    document.getElementById('btnHeaderRecord').addEventListener('click', startRecording);
+
+    document.getElementById('btnShare').addEventListener('click', shareUrl);
+    document.getElementById('btnHeaderShare').addEventListener('click', shareUrl);
 
     // 觸碰互動控制
     const raycaster = new THREE.Raycaster();
