@@ -656,7 +656,7 @@ To My Best Friend ❤️</textarea>
       mesh.geometry.computeVertexNormals();
     }
 
-    // --- 6. 自動輪播、錄影全行數與分享邏輯 ---
+    // --- 6. 自動輪播與預設 4 秒停留錄影邏輯 ---
     function resetAutoPlayTimer() {
       if (autoPlayTimer) clearTimeout(autoPlayTimer);
       autoPlayTimer = setTimeout(() => {
@@ -664,7 +664,7 @@ To My Best Friend ❤️</textarea>
       }, 6000);
     }
 
-    function triggerAutoFlipSequence(onComplete = null) {
+    function triggerAutoFlipSequence(holdDuration = 300, onComplete = null) {
       const rawText = document.getElementById('msgInput').value;
       const lines = rawText.split('\n').filter(line => line.trim().length > 0);
       if (lines.length <= 1 && !onComplete) {
@@ -672,17 +672,22 @@ To My Best Friend ❤️</textarea>
         return;
       }
 
+      // 闔上卡片切換訊息
       animateAngleTo(0, 1000, () => {
         setTimeout(() => {
+          // 展開卡片
           animateAngleTo(90, 1000, () => {
-            if (onComplete) onComplete();
-            else resetAutoPlayTimer();
+            // 在展開狀態下精準停留指定時間 (例如 4000ms)
+            setTimeout(() => {
+              if (onComplete) onComplete();
+              else resetAutoPlayTimer();
+            }, holdDuration);
           });
         }, 300);
       });
     }
 
-    // 【核心更新】：錄影時自動將「所有訊息行」全數輪播一遍
+    // 錄影模式：每行訊息展開後停留 4 秒
     function startFullRecording() {
       if (isAnimating) return;
       if (autoPlayTimer) clearTimeout(autoPlayTimer);
@@ -711,7 +716,6 @@ To My Best Friend ❤️</textarea>
         resetAutoPlayTimer();
       };
 
-      // 將指標歸零至第 1 行開始錄影
       currentLineIndex = 0;
       updateTextTexture();
       updateCardGeometry();
@@ -719,28 +723,29 @@ To My Best Friend ❤️</textarea>
       recorder.start();
 
       let playedCount = 0;
+      const HOLD_TIME_MS = 4000; // 每行停留 4 秒
+
       function loopPlayNextLine() {
         playedCount++;
         if (playedCount < totalLines) {
-          triggerAutoFlipSequence(() => {
-            setTimeout(loopPlayNextLine, 200);
+          triggerAutoFlipSequence(HOLD_TIME_MS, () => {
+            loopPlayNextLine();
           });
         } else {
-          // 最後一行播放完畢，執行一次開闔展示後停止錄影
-          triggerAutoFlipSequence(() => {
+          // 最後一行同樣停留 4 秒後結束錄影
+          triggerAutoFlipSequence(HOLD_TIME_MS, () => {
             setTimeout(() => {
               recorder.stop();
-            }, 600);
+            }, 300);
           });
         }
       }
 
-      // 如果只有 1 行，直接執行一次開闔；若多行則連續輪播
       if (totalLines === 1) {
-        triggerAutoFlipSequence(() => {
+        triggerAutoFlipSequence(HOLD_TIME_MS, () => {
           setTimeout(() => {
             recorder.stop();
-          }, 600);
+          }, 300);
         });
       } else {
         loopPlayNextLine();
@@ -763,7 +768,7 @@ To My Best Friend ❤️</textarea>
       });
     }
 
-    // 事件監聽（綁定右上角按鈕）
+    // 事件監聽（綁定右上角快捷鍵）
     document.getElementById('btnHeaderRecord').addEventListener('click', startFullRecording);
     document.getElementById('btnHeaderShare').addEventListener('click', shareUrl);
 
