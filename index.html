@@ -45,10 +45,10 @@
       background: rgba(255, 255, 255, 0.1);
       color: #fff;
       border: 1px solid rgba(255, 255, 255, 0.2);
-      padding: 6px 10px;
+      padding: 6px 12px;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 0.78rem;
+      font-size: 0.82rem;
       font-weight: 600;
       display: flex;
       align-items: center;
@@ -110,7 +110,7 @@
         top: auto;
         bottom: 10px;
         width: auto;
-        max-height: 48vh;
+        max-height: 45vh;
       }
     }
     .panel {
@@ -161,7 +161,7 @@
     }
     textarea {
       width: 100%;
-      height: 75px;
+      height: 80px;
       padding: 8px;
       border-radius: 4px;
       border: 1px solid #48485e;
@@ -205,39 +205,6 @@
       display: inline-block;
       margin-top: 4px;
     }
-    .action-btn-group {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-top: 10px;
-    }
-    .btn-action {
-      background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);
-      color: #fff;
-      border: none;
-      padding: 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.82rem;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      box-shadow: 0 4px 12px rgba(30, 136, 229, 0.3);
-      transition: all 0.2s ease;
-    }
-    .btn-action:hover {
-      filter: brightness(1.1);
-      transform: translateY(-1px);
-    }
-    .btn-action:active {
-      transform: translateY(0);
-    }
-    .btn-record {
-      background: linear-gradient(135deg, #e53935 0%, #c62828 100%);
-      box-shadow: 0 4px 12px rgba(229, 57, 53, 0.3);
-    }
     .recording-indicator {
       position: absolute;
       top: 16px;
@@ -273,7 +240,7 @@
 
   <header>
     <h1>Pop-Up Card Simulator</h1>
-    <!-- 頂部頁頭快捷鍵，隨手可點 -->
+    <!-- 右上角快捷功能按鈕 -->
     <div class="header-actions">
       <button class="btn-header btn-header-record" id="btnHeaderRecord">🎥 錄影</button>
       <button class="btn-header" id="btnHeaderShare">🔗 分享</button>
@@ -287,11 +254,11 @@
     </div>
 
     <div class="sidebar">
-      <!-- 面板 1：預設展開 (不加 collapsed) -->
-      <div class="panel">
+      <!-- 面板 1：彈出訊息設定 -->
+      <div class="panel collapsed">
         <div class="panel-header" onclick="togglePanel(this)">
           <h2>彈出訊息 (MESSAGE CARD)</h2>
-          <span class="toggle-icon">−</span>
+          <span class="toggle-icon">+</span>
         </div>
         <div class="panel-body">
           <div class="control-group">
@@ -301,16 +268,6 @@ Happy Birthday! 🎉
 To My Best Friend ❤️</textarea>
             <div class="page-indicator" id="pageIndicator">當前顯示：第 1 行</div>
             <div class="auto-play-badge">⏱️ 6秒未觸碰將自動輪播下一句</div>
-          </div>
-
-          <!-- 功能按鈕群組 -->
-          <div class="action-btn-group">
-            <button class="btn-action btn-record" id="btnRecord">
-              🎥 錄製展頁短片存檔
-            </button>
-            <button class="btn-action" id="btnShare">
-              🔗 複製此設定網址分享
-            </button>
           </div>
         </div>
       </div>
@@ -402,7 +359,7 @@ To My Best Friend ❤️</textarea>
     }
     loadUrlParams();
 
-    // 動態頁面貼圖
+    // 動態頁面貼圖 (點陣紋理 + 手作虛線 + 右下印章)
     const pageCanvas = document.createElement('canvas');
     pageCanvas.width = 1024;
     pageCanvas.height = 2048;
@@ -462,7 +419,7 @@ To My Best Friend ❤️</textarea>
       pageTexture.needsUpdate = true;
     }
 
-    // 字卡貼圖
+    // 字卡貼圖 Canvas
     const textCanvas = document.createElement('canvas');
     textCanvas.width = 1600;
     textCanvas.height = 450;
@@ -564,11 +521,13 @@ To My Best Friend ❤️</textarea>
     const cardRoot = new THREE.Group();
     scene.add(cardRoot);
 
+    // 卡片下頁
     const baseBottomMesh = new THREE.Mesh(new THREE.PlaneGeometry(CARD_L, CARD_W * 2), baseMaterial);
     baseBottomMesh.geometry.rotateX(Math.PI / 2);
     baseBottomMesh.geometry.translate(CARD_L / 2, 0, 0);
     cardRoot.add(baseBottomMesh);
 
+    // 卡片上頁
     const topPivot = new THREE.Group();
     cardRoot.add(topPivot);
 
@@ -702,7 +661,7 @@ To My Best Friend ❤️</textarea>
       mesh.geometry.computeVertexNormals();
     }
 
-    // --- 6. 自動輪播、錄影與分享核心邏輯 ---
+    // --- 6. 自動輪播、錄影與分享功能 ---
     function resetAutoPlayTimer() {
       if (autoPlayTimer) clearTimeout(autoPlayTimer);
       autoPlayTimer = setTimeout(() => {
@@ -728,8 +687,8 @@ To My Best Friend ❤️</textarea>
       });
     }
 
-    // 錄影執行函式
-    function startRecording() {
+    // 錄影功能
+    document.getElementById('btnHeaderRecord').addEventListener('click', () => {
       if (isAnimating) return;
       if (autoPlayTimer) clearTimeout(autoPlayTimer);
 
@@ -760,10 +719,10 @@ To My Best Friend ❤️</textarea>
           recorder.stop();
         }, 500);
       });
-    }
+    });
 
-    // 分享執行函式
-    function shareUrl() {
+    // 分享功能
+    document.getElementById('btnHeaderShare').addEventListener('click', () => {
       const rawText = document.getElementById('msgInput').value;
       const baseCol = document.getElementById('baseColor').value.replace('#', '');
       const textCol = document.getElementById('textColor').value.replace('#', '');
@@ -776,14 +735,7 @@ To My Best Friend ❤️</textarea>
       }).catch(() => {
         alert('複製失敗，請手動複製網址：\n' + shareLink);
       });
-    }
-
-    // 事件監聽（同時綁定面板按鈕與頂部頁頭快捷鍵）
-    document.getElementById('btnRecord').addEventListener('click', startRecording);
-    document.getElementById('btnHeaderRecord').addEventListener('click', startRecording);
-
-    document.getElementById('btnShare').addEventListener('click', shareUrl);
-    document.getElementById('btnHeaderShare').addEventListener('click', shareUrl);
+    });
 
     // 觸碰互動控制
     const raycaster = new THREE.Raycaster();
