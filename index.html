@@ -240,7 +240,6 @@
 
   <header>
     <h1>Pop-Up Card Simulator</h1>
-    <!-- 右上角快捷功能按鈕 -->
     <div class="header-actions">
       <button class="btn-header btn-header-record" id="btnHeaderRecord">🎥 錄影</button>
       <button class="btn-header" id="btnHeaderShare">🔗 分享</button>
@@ -254,7 +253,6 @@
     </div>
 
     <div class="sidebar">
-      <!-- 面板 1：彈出訊息設定 -->
       <div class="panel collapsed">
         <div class="panel-header" onclick="togglePanel(this)">
           <h2>彈出訊息 (MESSAGE CARD)</h2>
@@ -272,7 +270,6 @@ To My Best Friend ❤️</textarea>
         </div>
       </div>
 
-      <!-- 面板 2：配色設定 -->
       <div class="panel collapsed">
         <div class="panel-header" onclick="togglePanel(this)">
           <h2>配色設定</h2>
@@ -359,7 +356,7 @@ To My Best Friend ❤️</textarea>
     }
     loadUrlParams();
 
-    // 動態頁面貼圖 (點陣紋理 + 手作虛線 + 右下印章)
+    // 動態頁面貼圖
     const pageCanvas = document.createElement('canvas');
     pageCanvas.width = 1024;
     pageCanvas.height = 2048;
@@ -521,13 +518,11 @@ To My Best Friend ❤️</textarea>
     const cardRoot = new THREE.Group();
     scene.add(cardRoot);
 
-    // 卡片下頁
     const baseBottomMesh = new THREE.Mesh(new THREE.PlaneGeometry(CARD_L, CARD_W * 2), baseMaterial);
     baseBottomMesh.geometry.rotateX(Math.PI / 2);
     baseBottomMesh.geometry.translate(CARD_L / 2, 0, 0);
     cardRoot.add(baseBottomMesh);
 
-    // 卡片上頁
     const topPivot = new THREE.Group();
     cardRoot.add(topPivot);
 
@@ -661,7 +656,7 @@ To My Best Friend ❤️</textarea>
       mesh.geometry.computeVertexNormals();
     }
 
-    // --- 6. 自動輪播、錄影與分享功能 ---
+    // --- 6. 自動輪播、錄影全行數與分享邏輯 ---
     function resetAutoPlayTimer() {
       if (autoPlayTimer) clearTimeout(autoPlayTimer);
       autoPlayTimer = setTimeout(() => {
@@ -687,10 +682,14 @@ To My Best Friend ❤️</textarea>
       });
     }
 
-    // 錄影功能
-    document.getElementById('btnHeaderRecord').addEventListener('click', () => {
+    // 【核心更新】：錄影時自動將「所有訊息行」全數輪播一遍
+    function startFullRecording() {
       if (isAnimating) return;
       if (autoPlayTimer) clearTimeout(autoPlayTimer);
+
+      const rawText = document.getElementById('msgInput').value;
+      const lines = rawText.split('\n').filter(line => line.trim().length > 0);
+      const totalLines = Math.max(1, lines.length);
 
       const recBadge = document.getElementById('recBadge');
       recBadge.style.display = 'flex';
@@ -712,17 +711,44 @@ To My Best Friend ❤️</textarea>
         resetAutoPlayTimer();
       };
 
+      // 將指標歸零至第 1 行開始錄影
+      currentLineIndex = 0;
+      updateTextTexture();
+      updateCardGeometry();
+
       recorder.start();
-      
-      triggerAutoFlipSequence(() => {
-        setTimeout(() => {
-          recorder.stop();
-        }, 500);
-      });
-    });
+
+      let playedCount = 0;
+      function loopPlayNextLine() {
+        playedCount++;
+        if (playedCount < totalLines) {
+          triggerAutoFlipSequence(() => {
+            setTimeout(loopPlayNextLine, 200);
+          });
+        } else {
+          // 最後一行播放完畢，執行一次開闔展示後停止錄影
+          triggerAutoFlipSequence(() => {
+            setTimeout(() => {
+              recorder.stop();
+            }, 600);
+          });
+        }
+      }
+
+      // 如果只有 1 行，直接執行一次開闔；若多行則連續輪播
+      if (totalLines === 1) {
+        triggerAutoFlipSequence(() => {
+          setTimeout(() => {
+            recorder.stop();
+          }, 600);
+        });
+      } else {
+        loopPlayNextLine();
+      }
+    }
 
     // 分享功能
-    document.getElementById('btnHeaderShare').addEventListener('click', () => {
+    function shareUrl() {
       const rawText = document.getElementById('msgInput').value;
       const baseCol = document.getElementById('baseColor').value.replace('#', '');
       const textCol = document.getElementById('textColor').value.replace('#', '');
@@ -735,7 +761,11 @@ To My Best Friend ❤️</textarea>
       }).catch(() => {
         alert('複製失敗，請手動複製網址：\n' + shareLink);
       });
-    });
+    }
+
+    // 事件監聽（綁定右上角按鈕）
+    document.getElementById('btnHeaderRecord').addEventListener('click', startFullRecording);
+    document.getElementById('btnHeaderShare').addEventListener('click', shareUrl);
 
     // 觸碰互動控制
     const raycaster = new THREE.Raycaster();
