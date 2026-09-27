@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Pop-Up Card Simulator — V-Fold 機構</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: #121218;
+      color: #f0f0f5;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: -webkit-fill-available;
+      overflow: hidden;
+      user-select: none;
+    }
+    header {
+      background-color: #1e1e28;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #2d2d3d;
+      z-index: 10;
+      flex-shrink: 0;
+    }
+    h1 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #64b5f6;
+    }
+    .main-container {
+      display: flex;
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+    }
+    #canvas-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      background: radial-gradient(circle at center, #252535 0%, #0d0d12 100%);
+      z-index: 1;
+      cursor: pointer;
+    }
+    .sidebar {
+      position: absolute;
+      right: 12px;
+      top: 12px;
+      width: 320px;
+      max-height: calc(100% - 24px);
+      background-color: rgba(30, 30, 42, 0.92);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+      z-index: 5;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      transition: all 0.3s ease;
+    }
+    @media (max-width: 768px) {
+      .sidebar {
+        right: 10px;
+        left: 10px;
+        top: auto;
+        bottom: 10px;
+        width: auto;
+        max-height: 45vh;
+      }
+    }
+    .panel {
+      background-color: rgba(42, 42, 58, 0.8);
+      border-radius: 8px;
+      border: 1px solid #3d3d4e;
+      overflow: hidden;
+    }
+    .panel-header {
+      padding: 10px 12px;
+      background-color: rgba(49, 49, 66, 0.9);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .panel-header h2 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #90caf9;
+      margin: 0;
+    }
+    .toggle-icon {
+      font-size: 0.9rem;
+      font-weight: bold;
+      color: #64b5f6;
+    }
+    .panel-body {
+      padding: 12px;
+      display: block;
+    }
+    .panel.collapsed .panel-body {
+      display: none;
+    }
+    .control-group {
+      margin-bottom: 10px;
+    }
+    .control-group:last-child {
+      margin-bottom: 0;
+    }
+    label {
+      display: block;
+      font-size: 0.8rem;
+      margin-bottom: 4px;
+      color: #ccc;
+    }
+    textarea {
+      width: 100%;
+      height: 80px;
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #48485e;
+      background-color: #1e1e28;
+      color: #fff;
+      font-size: 0.85rem;
+      resize: vertical;
+      font-family: inherit;
+    }
+    input[type="color"] {
+      width: 100%;
+      height: 32px;
+      padding: 2px;
+      border-radius: 4px;
+      border: 1px solid #48485e;
+      background-color: #1e1e28;
+      cursor: pointer;
+    }
+    .color-pickers {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .color-picker-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .page-indicator {
+      font-size: 0.75rem;
+      color: #64b5f6;
+      margin-top: 4px;
+      text-align: right;
+    }
+    .auto-play-badge {
+      font-size: 0.7rem;
+      color: #81c784;
+      background-color: rgba(76, 175, 80, 0.15);
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-top: 4px;
+    }
+    .action-btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .btn-action {
+      background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);
+      color: #fff;
+      border: none;
+      padding: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 4px 12px rgba(30, 136, 229, 0.3);
+      transition: all 0.2s ease;
+    }
+    .btn-action:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+    .btn-action:active {
+      transform: translateY(0);
+    }
+    .btn-record {
+      background: linear-gradient(135deg, #e53935 0%, #c62828 100%);
+      box-shadow: 0 4px 12px rgba(229, 57, 53, 0.3);
+    }
+    .recording-indicator {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      background-color: rgba(229, 57, 53, 0.85);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      z-index: 10;
+      backdrop-filter: blur(4px);
+    }
+    .recording-dot {
+      width: 8px;
+      height: 8px;
+      background-color: #fff;
+      border-radius: 50%;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+  <header>
+    <h1>Pop-Up Card Simulator — V-Fold 機構</h1>
+  </header>
+
+  <div class="main-container">
+    <div id="canvas-container"></div>
+    <div class="recording-indicator" id="recBadge">
+      <div class="recording-dot"></div> 錄影存檔中...
+    </div>
+
+    <div class="sidebar">
+      <!-- 面板 1：多行訊息與輪播 -->
+      <div class="panel collapsed">
+        <div class="panel-header" onclick="togglePanel(this)">
+          <h2>彈出訊息 (MESSAGE CARD)</h2>
+          <span class="toggle-icon">+</span>
+        </div>
+        <div class="panel-body">
+          <div class="control-group">
+            <label for="msgInput">多行輪播訊息輸入：</label>
+            <textarea id="msgInput" placeholder="每行代表一次開啟顯示的文字...">週日假期愉快
+Happy Birthday! 🎉
+To My Best Friend ❤️</textarea>
+            <div class="page-indicator" id="pageIndicator">當前顯示：第 1 行</div>
+            <div class="auto-play-badge">⏱️ 6秒未觸碰將自動輪播下一句</div>
+          </div>
+
+          <div class="action-btn-group">
+            <button class="btn-action btn-record" id="btnRecord">
+              🎥 錄製展頁短片存檔
+            </button>
+            <button class="btn-action" id="btnShare">
+              🔗 複製此設定網址分享
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 面板 2：配色設定 -->
+      <div class="panel collapsed">
+        <div class="panel-header" onclick="togglePanel(this)">
+          <h2>配色設定</h2>
+          <span class="toggle-icon">+</span>
+        </div>
+        <div class="panel-body">
+          <div class="color-pickers">
+            <div class="color-picker-item">
+              <label for="baseColor">卡片底色</label>
+              <input type="color" id="baseColor" value="#90caf9">
+            </div>
+            <div class="color-picker-item">
+              <label for="textColor">文字顏色</label>
+              <input type="color" id="textColor" value="#ffffff">
+            </div>
+            <div class="color-picker-item" style="grid-column: span 2;">
+              <label for="boardColor">字卡底色</label>
+              <input type="color" id="boardColor" value="#9c27b0">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function togglePanel(headerElement) {
+      const panel = headerElement.parentElement;
+      const icon = headerElement.querySelector('.toggle-icon');
+      panel.classList.toggle('collapsed');
+      icon.textContent = panel.classList.contains('collapsed') ? '+' : '−';
+    }
+
+    // --- 1. Three.js 初始化 ---
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    
+    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera.position.set(3, 4, 12);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, preserveDrawingBuffer: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.target.set(1.5, 1.5, 0);
+    controls.update();
+
+    // --- 2. 光照系統 ---
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+    dirLight.position.set(8, 15, 12);
+    dirLight.castShadow = true;
+    scene.add(dirLight);
+
+    // --- 3. 動態卡片內頁貼圖生成 (底紋與 stamp 印章) ---
+    const CARD_W = 8;
+    const CARD_L = 7;
+    const MAX_BOARD_WIDTH = CARD_W * 1.95; 
+
+    const fixedArmLength = 1.8;
+    const fixedStripWidth = 1.5;
+    const fixedTabLength = 0.8;
+
+    let currentAngleDeg = 90.0;
+    let currentLineIndex = 0; 
+    let wasClosed = false;
+    let autoPlayTimer = null;
+    let isAnimating = false;
+
+    function loadUrlParams() {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has('msg')) {
+        document.getElementById('msgInput').value = decodeURIComponent(urlParams.get('msg'));
+      }
+      if (urlParams.has('base')) document.getElementById('baseColor').value = '#' + urlParams.get('base');
+      if (urlParams.has('text')) document.getElementById('textColor').value = '#' + urlParams.get('text');
+      if (urlParams.has('board')) document.getElementById('boardColor').value = '#' + urlParams.get('board');
+    }
+    loadUrlParams();
+
+    // 建立卡片頁面動態 Canvas 貼圖
+    const pageCanvas = document.createElement('canvas');
+    pageCanvas.width = 1024;
+    pageCanvas.height = 2048;
+    const pageCtx = pageCanvas.getContext('2d');
+    const pageTexture = new THREE.CanvasTexture(pageCanvas);
+
+    function updatePageTexture() {
+      const baseColor = document.getElementById('baseColor').value;
+      const w = pageCanvas.width;
+      const h = pageCanvas.height;
+
+      // 1. 底色
+      pageCtx.fillStyle = baseColor;
+      pageCtx.fillRect(0, 0, w, h);
+
+      // 2. 幾何點陣 Polka Dot Grid
+      pageCtx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+      const dotSpacing = 40;
+      for (let x = dotSpacing; x < w; x += dotSpacing) {
+        for (let y = dotSpacing; y < h; y += dotSpacing) {
+          pageCtx.beginPath();
+          pageCtx.arc(x, y, 3, 0, Math.PI * 2);
+          pageCtx.fill();
+        }
+      }
+
+      // 3. 虛線手作邊框 (Border Line)
+      pageCtx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+      pageCtx.lineWidth = 6;
+      pageCtx.setLineDash([16, 12]);
+
+      // 上頁邊框
+      pageCtx.strokeRect(30, 30, w - 60, (h / 2) - 60);
+      // 下頁邊框
+      pageCtx.strokeRect(30, (h / 2) + 30, w - 60, (h / 2) - 60);
+
+      pageCtx.setLineDash([]); // 重設線條
+
+      // 4. 右下角「早安 Good Morning」印章標章 (Stamp)
+      const stampX = w - 180;
+      const stampY = h - 180;
+      const stampR = 90;
+
+      pageCtx.save();
+      pageCtx.translate(stampX, stampY);
+      pageCtx.rotate(-0.15); // 微傾斜增加印章感
+
+      // 外雙圈
+      pageCtx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+      pageCtx.lineWidth = 5;
+      pageCtx.beginPath(); pageCtx.arc(0, 0, stampR, 0, Math.PI * 2); pageCtx.stroke();
+      pageCtx.lineWidth = 2;
+      pageCtx.beginPath(); pageCtx.arc(0, 0, stampR - 8, 0, Math.PI * 2); pageCtx.stroke();
+
+      // 印章文字
+      pageCtx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      pageCtx.font = 'bold 28px sans-serif';
+      pageCtx.textAlign = 'center';
+      pageCtx.textBaseline = 'middle';
+      pageCtx.fillText('早安', 0, -12);
+      pageCtx.font = 'bold 16px sans-serif';
+      pageCtx.fillText('Good Morning', 0, 20);
+
+      pageCtx.restore();
+
+      pageTexture.needsUpdate = true;
+    }
+
+    // --- 字卡 Canvas ---
+    const textCanvas = document.createElement('canvas');
+    textCanvas.width = 1600;
+    textCanvas.height = 450;
+    const ctx = textCanvas.getContext('2d');
+    const textTexture = new THREE.CanvasTexture(textCanvas);
+    textTexture.minFilter = THREE.LinearFilter;
+
+    let computedBoardWidth = 6.0;
+
+    function getCurrentLineText() {
+      const rawText = document.getElementById('msgInput').value;
+      const lines = rawText.split('\n').filter(line => line.trim().length > 0);
+      if (lines.length === 0) return ' ';
+      
+      if (currentLineIndex >= lines.length) {
+        currentLineIndex = 0;
+      }
+      
+      document.getElementById('pageIndicator').textContent = `當前顯示：第 ${currentLineIndex + 1} / ${lines.length} 行`;
+      return lines[currentLineIndex];
+    }
+
+    function updateTextTexture() {
+      const text = getCurrentLineText();
+      const txtColor = document.getElementById('textColor').value;
+      const bgColor = document.getElementById('boardColor').value;
+
+      ctx.clearRect(0, 0, textCanvas.width, textCanvas.height);
+
+      const fontSize = 340;
+      ctx.font = `900 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+      
+      const strokeWidth = fontSize * 0.22;
+      const textMetrics = ctx.measureText(text);
+      const fullTextWidth = textMetrics.width + strokeWidth * 2;
+
+      const maxDrawWidth = textCanvas.width * 0.96;
+      
+      let widthScale = 1.0;
+      if (fullTextWidth > maxDrawWidth) {
+        widthScale = maxDrawWidth / fullTextWidth;
+      }
+
+      computedBoardWidth = Math.min(MAX_BOARD_WIDTH, Math.max(3.5, (fullTextWidth * widthScale / textCanvas.width) * MAX_BOARD_WIDTH));
+
+      ctx.save();
+      ctx.translate(textCanvas.width / 2, textCanvas.height - (strokeWidth / 2));
+      ctx.scale(widthScale, 1.0); 
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = strokeWidth * 1.35;
+      ctx.strokeText(text, 0, 0);
+
+      ctx.strokeStyle = bgColor;
+      ctx.lineWidth = strokeWidth;
+      ctx.strokeText(text, 0, 0);
+
+      ctx.fillStyle = txtColor;
+      ctx.fillText(text, 0, 0);
+
+      ctx.restore();
+      textTexture.needsUpdate = true;
+    }
+
+    // --- 4. 材質與 3D 結構 ---
+    updatePageTexture();
+
+    let baseMaterial = new THREE.MeshStandardMaterial({ 
+      map: pageTexture, 
+      side: THREE.DoubleSide, 
+      roughness: 0.5 
+    });
+    
+    let popMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0xfffdd0, 
+      side: THREE.DoubleSide, 
+      roughness: 0.4,
+      polygonOffset: true,
+      polygonOffsetFactor: 1,
+      polygonOffsetUnits: 1
+    });
+
+    let msgMaterial = new THREE.MeshStandardMaterial({ 
+      map: textTexture, 
+      side: THREE.DoubleSide, 
+      roughness: 0.2,
+      transparent: true,
+      alphaTest: 0.05,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2
+    });
+
+    const cardRoot = new THREE.Group();
+    scene.add(cardRoot);
+
+    // 卡片下頁 Plane Geometry
+    const baseBottomMesh = new THREE.Mesh(new THREE.PlaneGeometry(CARD_L, CARD_W * 2), baseMaterial);
+    baseBottomMesh.geometry.rotateX(Math.PI / 2);
+    baseBottomMesh.geometry.translate(CARD_L / 2, 0, 0);
+    cardRoot.add(baseBottomMesh);
+
+    // 卡片上頁 Plane Geometry
+    const topPivot = new THREE.Group();
+    cardRoot.add(topPivot);
+
+    const baseTopMesh = new THREE.Mesh(new THREE.PlaneGeometry(CARD_L, CARD_W * 2), baseMaterial);
+    baseTopMesh.geometry.rotateX(Math.PI / 2);
+    baseTopMesh.geometry.translate(CARD_L / 2, 0, 0);
+    topPivot.add(baseTopMesh);
+
+    function createBufferQuad(mat, isTextured = false) {
+      const geom = new THREE.BufferGeometry();
+      geom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(18), 3));
+      
+      if (isTextured) {
+        geom.setAttribute('uv', new THREE.BufferAttribute(new Float32Array([
+          0, 0, 1, 0, 1, 1,
+          0, 0, 1, 1, 0, 1
+        ]), 2));
+      } else {
+        geom.setAttribute('uv', new THREE.BufferAttribute(new Float32Array([0,0, 1,0, 1,1, 0,0, 1,1, 0,1]), 2));
+      }
+      return new THREE.Mesh(geom, mat);
+    }
+
+    const armBottomMesh = createBufferQuad(popMaterial);
+    const armTopMesh = createBufferQuad(popMaterial);
+    const tabBottomMesh = createBufferQuad(popMaterial);
+    const tabTopMesh = createBufferQuad(popMaterial);
+    const msgBoardMesh = createBufferQuad(msgMaterial, true);
+
+    cardRoot.add(armBottomMesh);
+    cardRoot.add(armTopMesh);
+    cardRoot.add(tabBottomMesh);
+    cardRoot.add(tabTopMesh);
+    cardRoot.add(msgBoardMesh);
+
+    // --- 5. 幾何運動學計算 ---
+    function updateCardGeometry() {
+      const angleDeg = currentAngleDeg;
+      const angleRad = (angleDeg * Math.PI) / 180;
+
+      const L = fixedArmLength;
+      const W = fixedStripWidth;
+      const T = fixedTabLength;
+      const BW = computedBoardWidth;
+
+      if (angleDeg < 2.0) {
+        msgBoardMesh.visible = false;
+        if (!wasClosed) {
+          wasClosed = true;
+          const rawText = document.getElementById('msgInput').value;
+          const lines = rawText.split('\n').filter(line => line.trim().length > 0);
+          if (lines.length > 1) {
+            currentLineIndex = (currentLineIndex + 1) % lines.length;
+            updateTextTexture();
+          }
+        }
+      } else {
+        msgBoardMesh.visible = true;
+        wasClosed = false;
+      }
+
+      topPivot.rotation.z = angleRad;
+
+      const jointB = new THREE.Vector3(L, 0, 0);
+      const jointT_local = new THREE.Vector3(L, 0, 0);
+      const jointT = jointT_local.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), angleRad);
+
+      const cosA = Math.cos(angleRad);
+      const sinA = Math.sin(angleRad);
+      const apex = new THREE.Vector3(L * (1.0 + cosA), L * sinA, 0);
+
+      const tabB_end = new THREE.Vector3(L - T, 0, 0);
+      const tabT_end = new THREE.Vector3(L - T, 0, 0).applyAxisAngle(new THREE.Vector3(0, 0, 1), angleRad);
+
+      updateQuad(armBottomMesh,
+        new THREE.Vector3(jointB.x, jointB.y, -W/2),
+        new THREE.Vector3(jointB.x, jointB.y, W/2),
+        new THREE.Vector3(apex.x, apex.y, W/2),
+        new THREE.Vector3(apex.x, apex.y, -W/2)
+      );
+
+      updateQuad(armTopMesh,
+        new THREE.Vector3(jointT.x, jointT.y, -W/2),
+        new THREE.Vector3(jointT.x, jointT.y, W/2),
+        new THREE.Vector3(apex.x, apex.y, W/2),
+        new THREE.Vector3(apex.x, apex.y, -W/2)
+      );
+
+      updateQuad(tabBottomMesh,
+        new THREE.Vector3(jointB.x, jointB.y, -W/2),
+        new THREE.Vector3(jointB.x, jointB.y, W/2),
+        new THREE.Vector3(tabB_end.x, tabB_end.y, W/2),
+        new THREE.Vector3(tabB_end.x, tabB_end.y, -W/2)
+      );
+
+      updateQuad(tabTopMesh,
+        new THREE.Vector3(jointT.x, jointT.y, -W/2),
+        new THREE.Vector3(jointT.x, jointT.y, W/2),
+        new THREE.Vector3(tabT_end.x, tabT_end.y, W/2),
+        new THREE.Vector3(tabT_end.x, tabT_end.y, -W/2)
+      );
+
+      const uDir = new THREE.Vector3().subVectors(apex, jointB).normalize();
+      const boardHeight = L * 2.0;
+
+      const bBottom = jointB.clone();
+      const bTop = new THREE.Vector3().addVectors(bBottom, uDir.clone().multiplyScalar(boardHeight));
+
+      const zOffset = 0.04; 
+      
+      const p1 = new THREE.Vector3(bBottom.x, 0, BW/2);
+      const p2 = new THREE.Vector3(bBottom.x, 0, -BW/2);
+      const p3 = new THREE.Vector3(bTop.x, bTop.y, -BW/2);
+      const p4 = new THREE.Vector3(bTop.x, bTop.y, BW/2);
+
+      updateQuad(msgBoardMesh, p1, p2, p3, p4, zOffset);
+    }
+
+    function updateQuad(mesh, p1, p2, p3, p4, zOffset = 0) {
+      const positions = mesh.geometry.attributes.position.array;
+      
+      positions[0] = p1.x; positions[1] = p1.y; positions[2] = p1.z + zOffset;
+      positions[3] = p2.x; positions[4] = p2.y; positions[5] = p2.z + zOffset;
+      positions[6] = p3.x; positions[7] = p3.y; positions[8] = p3.z + zOffset;
+
+      positions[9]  = p1.x; positions[10] = p1.y; positions[11] = p1.z + zOffset;
+      positions[12] = p3.x; positions[13] = p3.y; positions[14] = p3.z + zOffset;
+      positions[15] = p4.x; positions[16] = p4.y; positions[17] = p4.z + zOffset;
+
+      mesh.geometry.attributes.position.needsUpdate = true;
+      mesh.geometry.computeVertexNormals();
+    }
+
+    // --- 6. 自動輪播、錄影與分享功能 ---
+    function resetAutoPlayTimer() {
+      if (autoPlayTimer) clearTimeout(autoPlayTimer);
+      autoPlayTimer = setTimeout(() => {
+        triggerAutoFlipSequence();
+      }, 6000);
+    }
+
+    function triggerAutoFlipSequence(onComplete = null) {
+      const rawText = document.getElementById('msgInput').value;
+      const lines = rawText.split('\n').filter(line => line.trim().length > 0);
+      if (lines.length <= 1 && !onComplete) {
+        resetAutoPlayTimer();
+        return;
+      }
+
+      animateAngleTo(0, 1000, () => {
+        setTimeout(() => {
+          animateAngleTo(90, 1000, () => {
+            if (onComplete) onComplete();
+            else resetAutoPlayTimer();
+          });
+        }, 300);
+      });
+    }
+
+    // 錄影存檔
+    document.getElementById('btnRecord').addEventListener('click', () => {
+      if (isAnimating) return;
+      if (autoPlayTimer) clearTimeout(autoPlayTimer);
+
+      const recBadge = document.getElementById('recBadge');
+      recBadge.style.display = 'flex';
+
+      const stream = renderer.domElement.captureStream(60);
+      const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+      const chunks = [];
+
+      recorder.ondataavailable = e => chunks.push(e.data);
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `popup-card-${Date.now()}.webm`;
+        a.click();
+        URL.revokeObjectURL(url);
+        recBadge.style.display = 'none';
+        resetAutoPlayTimer();
+      };
+
+      recorder.start();
+      
+      triggerAutoFlipSequence(() => {
+        setTimeout(() => {
+          recorder.stop();
+        }, 500);
+      });
+    });
+
+    // 分享網址複製
+    document.getElementById('btnShare').addEventListener('click', () => {
+      const rawText = document.getElementById('msgInput').value;
+      const baseCol = document.getElementById('baseColor').value.replace('#', '');
+      const textCol = document.getElementById('textColor').value.replace('#', '');
+      const boardCol = document.getElementById('boardColor').value.replace('#', '');
+
+      const shareUrl = `${window.location.origin}${window.location.pathname}?msg=${encodeURIComponent(rawText)}&base=${baseCol}&text=${textCol}&board=${boardCol}`;
+
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        alert('🎉 立體卡片設定網址已成功複製到剪貼簿！');
+      }).catch(() => {
+        alert('複製失敗，請手動複製網址：\n' + shareUrl);
+      });
+    });
+
+    // 觸碰互動控制
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    container.addEventListener('pointerdown', (e) => {
+      touchStartX = e.clientX;
+      touchStartY = e.clientY;
+      resetAutoPlayTimer();
+    });
+
+    container.addEventListener('pointerup', (e) => {
+      resetAutoPlayTimer();
+      const dist = Math.hypot(e.clientX - touchStartX, e.clientY - touchStartY);
+      if (dist > 8) return;
+
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects([baseBottomMesh, baseTopMesh, msgBoardMesh, armBottomMesh, armTopMesh], true);
+
+      if (intersects.length > 0 && !isAnimating) {
+        const targetAngle = currentAngleDeg > 45 ? 0 : 90;
+        animateAngleTo(targetAngle, 1200);
+      }
+    });
+
+    function animateAngleTo(targetDeg, customDuration = 1200, onComplete = null) {
+      isAnimating = true;
+      const startDeg = currentAngleDeg;
+      const duration = customDuration; 
+      const startTime = performance.now();
+
+      function step(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(1, elapsed / duration);
+        const ease = 1 - Math.pow(1 - progress, 3);
+        currentAngleDeg = startDeg + (targetDeg - startDeg) * ease;
+
+        updateCardGeometry();
+
+        if (progress < 1) {
+          requestAnimationFrame(step);
+        } else {
+          isAnimating = false;
+          if (onComplete) onComplete();
+        }
+      }
+      requestAnimationFrame(step);
+    }
+
+    // --- 7. UI 控制事件監聽 ---
+    document.getElementById('msgInput').addEventListener('input', () => {
+      currentLineIndex = 0; 
+      resetAutoPlayTimer();
+      updateTextTexture();
+      updateCardGeometry();
+    });
+
+    document.getElementById('baseColor').addEventListener('input', (e) => {
+      updatePageTexture(); // 動態更新底紙顏色與紋理
+      resetAutoPlayTimer();
+    });
+    document.getElementById('textColor').addEventListener('input', () => {
+      resetAutoPlayTimer();
+      updateTextTexture();
+      updateCardGeometry();
+    });
+    document.getElementById('boardColor').addEventListener('input', () => {
+      resetAutoPlayTimer();
+      updateTextTexture();
+      updateCardGeometry();
+    });
+
+    // 啟動渲染與計時器
+    updateTextTexture();
+    updateCardGeometry();
+    resetAutoPlayTimer();
+
+    // --- 8. 動畫循環 ---
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+  </script>
+</body>
+</html>
